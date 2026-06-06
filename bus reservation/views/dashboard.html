@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - DMNS Bus Reservation</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">🚌 DMNS Bus Reservation</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/search">Search Buses</a>
+      <a href="/dashboard" class="btn-primary">Dashboard</a>
+      <a href="/" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+  <main>
+    <section class="dashboard-header">
+      <h2 id="welcomeText">Welcome back!</h2>
+      <p>Here are your booked tickets</p>
+      <a href="/search" class="btn-large" style="margin-top:10px">Book another ticket</a>
+    </section>
+    <section class="bookings-section">
+      <h3>Your Booked Tickets</h3>
+      <div id="bookingsList" class="routes-list"></div>
+    </section>
+  </main>
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || user.role === 'admin') {
+      if (user && user.role === 'admin') window.location.href = '/admin';
+      else window.location.href = '/login';
+    }
+    document.getElementById('welcomeText').textContent = `Welcome back, ${user.name}!`;
+    function loadBookings() {
+      fetch(`/api/bookings/${user.id}`)
+        .then(res => res.json())
+        .then(result => {
+          const list = document.getElementById('bookingsList');
+          if (result.success && result.bookings.length > 0) {
+            list.innerHTML = result.bookings.map(b => `
+              <div class="booking-card ${b.status}">
+                <div class="booking-info">
+                  <h3>${b.from_city} → ${b.to_city}</h3>
+                  <p><strong>Bus:</strong> ${b.bus_name}</p>
+                  <p><strong>Date:</strong> ${b.date}</p>
+                  <p><strong>Time:</strong> ${b.departure_time} - ${b.arrival_time}</p>
+                  <p><strong>Seats:</strong> ${b.seats}</p>
+                  <p><strong>Total:</strong> ₹${b.total_price}</p>
+                  <p><strong>Payment:</strong> ${b.payment_method}</p>
+                  <p><strong>Status:</strong> <span class="status">${b.status.toUpperCase()}</span></p>
+                </div>
+                ${b.status === 'confirmed' ? `<button class="btn-danger" onclick="cancelBooking(${b.id})">Cancel Booking</button>` : ''}
+              </div>
+            `).join('');
+          } else {
+            list.innerHTML = '<p class="no-results">No bookings yet. <a href="/search">Book your first ticket</a> now!</p>';
+          }
+        });
+    }
+    function cancelBooking(bookingId) {
+      if (!confirm('Are you sure you want to cancel this booking?')) return;
+      fetch('/api/bookings/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, userId: user.id })
+      }).then(res => res.json()).then(result => {
+        if (result.success) {
+          alert(result.message);
+          loadBookings();
+        } else {
+          alert(result.message);
+        }
+      });
+    }
+    function logout() {
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+    loadBookings();
+  </script>
+</body>
+</html>

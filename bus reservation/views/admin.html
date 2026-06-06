@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - DMNS Bus Reservation</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">🚌 DMNS Bus Reservation</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/admin" class="btn-primary">Admin Panel</a>
+      <a href="/" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+  <main>
+    <section class="dashboard-header">
+      <h2>Admin Dashboard</h2>
+      <p>Manage buses, routes, and bookings</p>
+    </section>
+    <section class="stats-section">
+      <div class="stat-card">
+        <h3>Total Users</h3>
+        <p id="totalUsers" class="stat-value">-</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Routes</h3>
+        <p id="totalRoutes" class="stat-value">-</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Bookings</h3>
+        <p id="totalBookings" class="stat-value">-</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Revenue</h3>
+        <p id="totalRevenue" class="stat-value">-</p>
+      </div>
+    </section>
+    <section class="admin-section">
+      <h3>Add New Route</h3>
+      <form id="addRouteForm" class="admin-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fromCity">From City</label>
+            <input type="text" id="fromCity" name="fromCity" required>
+          </div>
+          <div class="form-group">
+            <label for="toCity">To City</label>
+            <input type="text" id="toCity" name="toCity" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="routeDate">Date</label>
+            <input type="date" id="routeDate" name="date" required>
+          </div>
+          <div class="form-group">
+            <label for="busName">Bus Name</label>
+            <input type="text" id="busName" name="busName" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="departureTime">Departure</label>
+            <input type="time" id="departureTime" name="departureTime" required>
+          </div>
+          <div class="form-group">
+            <label for="arrivalTime">Arrival</label>
+            <input type="time" id="arrivalTime" name="arrivalTime" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="price">Price (₹)</label>
+            <input type="number" id="price" name="price" required>
+          </div>
+          <div class="form-group">
+            <label for="seatsAvailable">Seats Available</label>
+            <input type="number" id="seatsAvailable" name="seatsAvailable" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Add Route</button>
+      </form>
+    </section>
+    <section class="admin-section">
+      <h3>Add New Bus</h3>
+      <form id="addBusForm" class="admin-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="newBusName">Bus Name</label>
+            <input type="text" id="newBusName" name="busName" required>
+          </div>
+          <div class="form-group">
+            <label for="busType">Bus Type</label>
+            <input type="text" id="busType" name="busType" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="totalSeats">Total Seats</label>
+            <input type="number" id="totalSeats" name="totalSeats" required>
+          </div>
+          <div class="form-group">
+            <label for="busAmenities">Amenities</label>
+            <input type="text" id="busAmenities" name="amenities" placeholder="WiFi, AC, etc">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Add Bus</button>
+      </form>
+    </section>
+    <section class="bookings-section">
+      <h3>All Bookings</h3>
+      <div id="allBookingsList" class="routes-list"></div>
+    </section>
+  </main>
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || user.role !== 'admin') {
+      window.location.href = '/login';
+    }
+    function loadStats() {
+      fetch('/api/stats')
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            document.getElementById('totalUsers').textContent = result.stats.totalUsers;
+            document.getElementById('totalRoutes').textContent = result.stats.totalRoutes;
+            document.getElementById('totalBookings').textContent = result.stats.totalBookings;
+            document.getElementById('totalRevenue').textContent = '₹' + result.stats.revenue;
+          }
+        });
+    }
+    document.getElementById('addRouteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      const res = await fetch('/api/add-route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        e.target.reset();
+        loadAllBookings();
+        loadStats();
+      } else {
+        alert(result.message);
+      }
+    });
+    document.getElementById('addBusForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      const res = await fetch('/api/add-bus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        e.target.reset();
+        loadStats();
+      } else {
+        alert(result.message);
+      }
+    });
+    function loadAllBookings() {
+      fetch('/api/all-bookings')
+        .then(res => res.json())
+        .then(result => {
+          const list = document.getElementById('allBookingsList');
+          if (result.success && result.bookings.length > 0) {
+            list.innerHTML = '<table class="bookings-table"><thead><tr><th>ID</th><th>User</th><th>Route</th><th>Date</th><th>Seats</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead><tbody>' +
+              result.bookings.map(b => `<tr>
+                <td>${b.id}</td>
+                <td>${b.user_name}</td>
+                <td>${b.from_city} → ${b.to_city}</td>
+                <td>${b.date}</td>
+                <td>${b.seats}</td>
+                <td>₹${b.total_price}</td>
+                <td><span class="status">${b.status.toUpperCase()}</span></td>
+                <td>${b.payment_method}</td>
+              </tr>`).join('') + '</tbody></table>';
+          } else {
+            list.innerHTML = '<p class="no-results">No bookings found.</p>';
+          }
+        });
+    }
+    function logout() {
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+    loadStats();
+    loadAllBookings();
+  </script>
+</body>
+</html>

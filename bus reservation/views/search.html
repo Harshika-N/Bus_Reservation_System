@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Buses - DMNS Bus Reservation</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">🚌 DMNS Bus Reservation</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/search">Search Buses</a>
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
+    </div>
+  </nav>
+  <main>
+    <section class="form-section">
+      <h2>Search Available Buses</h2>
+      <form id="searchForm">
+        <div class="form-group">
+          <label for="from">From</label>
+          <input type="text" id="from" name="from" placeholder="e.g. Mumbai" required>
+        </div>
+        <div class="form-group">
+          <label for="to">To</label>
+          <input type="text" id="to" name="to" placeholder="e.g. Pune" required>
+        </div>
+        <div class="form-group">
+          <label for="date">Date <span class="optional">(optional)</span></label>
+          <input type="date" id="date" name="date">
+        </div>
+        <button type="submit" class="btn-primary">Search Buses</button>
+      </form>
+    </section>
+    <section id="results" class="results-section hidden">
+      <h2>Available Buses</h2>
+      <div id="routesList" class="routes-list"></div>
+    </section>
+    <section id="bookingSection" class="booking-panel hidden">
+      <h3>Book Your Seat</h3>
+      <div id="bookingDetails" class="booking-details"></div>
+      <form id="bookingForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="seats">Seats</label>
+            <input type="number" id="seats" name="seats" value="1" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="paymentMethod">Payment Method</label>
+            <select id="paymentMethod" name="paymentMethod">
+              <option value="online">Online Payment</option>
+              <option value="cash">Cash at Boarding</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="passengerName">Passenger Name</label>
+          <input type="text" id="passengerName" name="passengerName" required>
+        </div>
+        <div class="form-group">
+          <label for="passengerPhone">Passenger Phone</label>
+          <input type="tel" id="passengerPhone" name="passengerPhone" required>
+        </div>
+        <div class="form-group">
+          <strong>Total Price:</strong> ₹<span id="totalPrice">0</span>
+        </div>
+        <div class="booking-actions">
+          <button type="submit" class="btn-primary">Confirm Booking</button>
+          <button type="button" class="btn-danger" onclick="closeBooking()">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script>
+    let availableRoutes = [];
+    let activeRoute = null;
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const params = new URLSearchParams(formData);
+      const res = await fetch(`/api/routes?${params.toString()}`);
+      const result = await res.json();
+      const resultsSection = document.getElementById('results');
+      const routesList = document.getElementById('routesList');
+      if (result.success && result.routes.length > 0) {
+        availableRoutes = result.routes;
+        routesList.innerHTML = result.routes.map(route => `
+          <div class="route-card">
+            <div class="route-info">
+              <h3>${route.from_city} → ${route.to_city}</h3>
+              <p class="bus-name">🚌 ${route.bus_name}</p>
+              <p><strong>Date:</strong> ${route.date}</p>
+              <p><strong>Departure:</strong> ${route.departure_time}</p>
+              <p><strong>Arrival:</strong> ${route.arrival_time}</p>
+              <p><strong>Price:</strong> ₹${route.price} per seat</p>
+              <p><strong>Available Seats:</strong> ${route.seats_available}</p>
+            </div>
+            <div class="route-action">
+              <button class="btn-primary" onclick="openBooking(${route.id})">Book Now</button>
+            </div>
+          </div>
+        `).join('');
+        resultsSection.classList.remove('hidden');
+      } else {
+        routesList.innerHTML = '<p class="no-results">No buses found for this route. Please try different criteria.</p>';
+        resultsSection.classList.remove('hidden');
+      }
+    });
+    function openBooking(routeId) {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user) {
+        alert('Please login to book a ticket');
+        window.location.href = '/login';
+        return;
+      }
+      activeRoute = availableRoutes.find(r => r.id === routeId);
+      if (!activeRoute) {
+        alert('Selected route is no longer available. Please search again.');
+        return;
+      }
+      document.getElementById('bookingSection').classList.remove('hidden');
+      document.getElementById('bookingDetails').innerHTML = `
+        <p><strong>${activeRoute.from_city} → ${activeRoute.to_city}</strong></p>
+        <p><strong>Date:</strong> ${activeRoute.date}</p>
+        <p><strong>Departure:</strong> ${activeRoute.departure_time}</p>
+        <p><strong>Available Seats:</strong> ${activeRoute.seats_available}</p>
+        <p><strong>Price per seat:</strong> ₹${activeRoute.price}</p>
+      `;
+      const seatsInput = document.getElementById('seats');
+      seatsInput.max = activeRoute.seats_available;
+      seatsInput.value = 1;
+      document.getElementById('passengerName').value = user.name;
+      document.getElementById('passengerPhone').value = '';
+      updateTotalPrice();
+    }
+
+    function closeBooking() {
+      document.getElementById('bookingSection').classList.add('hidden');
+      activeRoute = null;
+    }
+
+    function updateTotalPrice() {
+      const seats = parseInt(document.getElementById('seats').value, 10) || 1;
+      const price = activeRoute ? activeRoute.price : 0;
+      document.getElementById('totalPrice').textContent = seats * price;
+    }
+
+    document.getElementById('seats').addEventListener('input', updateTotalPrice);
+    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!activeRoute) return;
+      const user = JSON.parse(localStorage.getItem('user'));
+      const seats = parseInt(document.getElementById('seats').value, 10);
+      const passengerName = document.getElementById('passengerName').value.trim();
+      const passengerPhone = document.getElementById('passengerPhone').value.trim();
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      if (!passengerName || !passengerPhone) {
+        alert('Please enter passenger name and phone number.');
+        return;
+      }
+      if (seats < 1 || seats > activeRoute.seats_available) {
+        alert(`Please choose between 1 and ${activeRoute.seats_available} seats.`);
+        return;
+      }
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          routeId: activeRoute.id,
+          seats,
+          passengerName,
+          passengerPhone,
+          paymentMethod
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(`Booking confirmed! Total: ₹${result.totalPrice}`);
+        closeBooking();
+        window.location.href = '/dashboard';
+      } else {
+        alert(result.message || 'Booking failed');
+      }
+    });
+  </script>
+</body>
+</html>

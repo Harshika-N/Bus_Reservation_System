@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - DMNS Bus Reservation</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">🚌 DMNS Bus Reservation</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/search">Search Buses</a>
+      <a href="/login">Login</a>
+      <a href="/register" class="btn-primary">Register</a>
+    </div>
+  </nav>
+  <main>
+    <section class="form-section">
+      <h2>Create Your Account</h2>
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required minlength="6">
+        </div>
+        <button type="submit" class="btn-primary">Register</button>
+        <p id="registerMessage" class="form-message"></p>
+        <p class="form-footer">Already have an account? <a href="/login">Login here</a></p>
+      </form>
+    </section>
+  </main>
+  <script>
+    const messageEl = document.getElementById('registerMessage');
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      messageEl.textContent = '';
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (result.success) {
+        messageEl.textContent = result.message;
+        messageEl.className = 'form-message success';
+        setTimeout(() => window.location.href = '/login', 1200);
+      } else {
+        messageEl.textContent = result.message || 'Registration failed';
+        messageEl.className = 'form-message error';
+      }
+    });
+  </script>
+</body>
+</html>
