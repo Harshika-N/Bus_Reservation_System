@@ -1,6 +1,6 @@
 # Bus Reservation System
 
-DMNS Mini Project - Bus Reservation System built with Node.js, Express, and SQLite (better-sqlite3). A Flask alternative is also included.
+DBNS Mini Project - Bus Reservation System built with Node.js, Express, and SQLite (better-sqlite3). A Flask alternative is also included.
 
 ## Features
 
@@ -96,6 +96,5 @@ python server.py
 
 Set `USE_MYSQL=1` environment variable along with `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DB` for MySQL support.
 
-## License
-
-MIT
+## Author
+Harshika N
